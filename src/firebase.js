@@ -1,3 +1,4 @@
+// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
@@ -12,6 +13,6 @@ const firebaseConfig = {
   measurementId: "G-GR1KKWD52V",
 };
 
-// Initialize Firebase and Firestore
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig); // ✅ This is the missing export
 export const db = getFirestore(app);
+export { app }; // ✅ Add this line

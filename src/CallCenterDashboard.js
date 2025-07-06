@@ -1,60 +1,97 @@
 import React, { useState, useEffect } from "react";
-import { db } from "./firebase.js";
+import { useAuth } from "./AuthContext";
+import { db } from "./firebase";
 import {
   collection,
-  addDoc,
   getDocs,
+  addDoc,
   deleteDoc,
   updateDoc,
   doc,
 } from "firebase/firestore";
 
 export default function CallCenterDashboard() {
-  const [doctors, setDoctors] = useState([]);
+  const { logout } = useAuth();
+
+  const [resources, setResources] = useState([]);
+  const [specialties, setSpecialties] = useState([]);
+  const [selectedSpecialty, setSelectedSpecialty] = useState("");
+  const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState("");
+
+  const [appointments, setAppointments] = useState([]);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
+
+  const [patientName, setPatientName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedHour, setSelectedHour] = useState("");
   const [selectedMinute, setSelectedMinute] = useState("");
-  const [patientName, setPatientName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [status, setStatus] = useState("");
-  const [appointments, setAppointments] = useState([]);
-  const [searchDate, setSearchDate] = useState("");
-  const [searchDoctor, setSearchDoctor] = useState("");
   const [editId, setEditId] = useState(null);
 
-  // Load doctors and appointments
-  useEffect(() => {
-    const fetchData = async () => {
-      const docSnap = await getDocs(collection(db, "doctors"));
-      setDoctors(docSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  const [filterDate, setFilterDate] = useState("");
+  const [filterDoctor, setFilterDoctor] = useState("");
 
-      await loadAppointments();
+  // Load doctors and specialties
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      const snapshot = await getDocs(collection(db, "resources"));
+      const doctors = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setResources(doctors);
+
+      const uniqueSpecialties = [
+        ...new Set(doctors.map((doc) => doc.specialty)),
+      ].sort();
+      setSpecialties(uniqueSpecialties);
     };
-    fetchData();
+    fetchDoctors();
   }, []);
 
-  const loadAppointments = async () => {
-    const snapshot = await getDocs(collection(db, "appointments"));
-    const docs = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setAppointments(docs);
-  };
+  // Filter doctor list when specialty is selected
+  useEffect(() => {
+    if (selectedSpecialty) {
+      const filtered = resources.filter(
+        (doc) => doc.specialty === selectedSpecialty
+      );
+      setFilteredDoctors(filtered);
+    } else {
+      setFilteredDoctors([]);
+    }
+  }, [selectedSpecialty, resources]);
 
-  const resetForm = () => {
-    setPatientName("");
-    setPhoneNumber("");
-    setSelectedDoctor("");
-    setSelectedDate("");
-    setSelectedHour("");
-    setSelectedMinute("");
-    setEditId(null);
-  };
+  // Load all appointments
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      const snapshot = await getDocs(collection(db, "appointments"));
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setAppointments(data);
+      setFilteredAppointments(data);
+    };
+    fetchAppointments();
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Filter appointments
+  useEffect(() => {
+    let filtered = [...appointments];
+
+    if (filterDate) {
+      filtered = filtered.filter((appt) => appt.date === filterDate);
+    }
+
+    if (filterDoctor) {
+      filtered = filtered.filter((appt) => appt.doctor === filterDoctor);
+    }
+
+    setFilteredAppointments(filtered);
+  }, [filterDate, filterDoctor, appointments]);
+
+  const handleBook = async () => {
     if (
       !patientName ||
       !phoneNumber ||
@@ -63,48 +100,41 @@ export default function CallCenterDashboard() {
       !selectedHour ||
       !selectedMinute
     ) {
-      setStatus("Please fill all required fields.");
+      alert("Please fill all required fields.");
       return;
     }
 
-    const fullTime = `${selectedHour}:${selectedMinute}`;
+    const time = `${selectedHour}:${selectedMinute}`;
+    const data = {
+      patientName,
+      phoneNumber,
+      doctor: selectedDoctor,
+      date: selectedDate,
+      time,
+    };
 
-    try {
-      if (editId) {
-        const ref = doc(db, "appointments", editId);
-        await updateDoc(ref, {
-          patientName,
-          phoneNumber,
-          doctor: selectedDoctor,
-          date: selectedDate,
-          time: fullTime,
-        });
-        setStatus("Appointment updated.");
-      } else {
-        await addDoc(collection(db, "appointments"), {
-          patientName,
-          phoneNumber,
-          doctor: selectedDoctor,
-          date: selectedDate,
-          time: fullTime,
-        });
-        setStatus("Appointment created.");
-      }
-
-      resetForm();
-      await loadAppointments();
-    } catch (err) {
-      console.error("Error saving appointment:", err);
-      setStatus("Error occurred.");
+    if (editId) {
+      await updateDoc(doc(db, "appointments", editId), data);
+      setEditId(null);
+    } else {
+      await addDoc(collection(db, "appointments"), data);
     }
-  };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this appointment?")) {
-      await deleteDoc(doc(db, "appointments", id));
-      await loadAppointments();
-      setStatus("Appointment deleted.");
-    }
+    // Clear form
+    setPatientName("");
+    setPhoneNumber("");
+    setSelectedDoctor("");
+    setSelectedDate("");
+    setSelectedHour("");
+    setSelectedMinute("");
+
+    // Refresh appointments
+    const snapshot = await getDocs(collection(db, "appointments"));
+    const dataList = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setAppointments(dataList);
   };
 
   const handleEdit = (appt) => {
@@ -116,39 +146,48 @@ export default function CallCenterDashboard() {
     setSelectedHour(hour);
     setSelectedMinute(minute);
     setEditId(appt.id);
-    setStatus("Editing appointment...");
   };
 
-  const today = new Date().toISOString().split("T")[0];
-
-  const filteredAppointments = appointments.filter((appt) => {
-    const dateMatch = searchDate ? appt.date === searchDate : true;
-    const doctorMatch = searchDoctor ? appt.doctor === searchDoctor : true;
-    return dateMatch && doctorMatch;
-  });
+  const handleDelete = async (id) => {
+    await deleteDoc(doc(db, "appointments", id));
+    setAppointments((prev) => prev.filter((appt) => appt.id !== id));
+  };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="dashboard">
+      <button onClick={logout} style={{ float: "right", margin: 10 }}>
+        Logout
+      </button>
       <h2>📞 Call Center Dashboard</h2>
-      <form onSubmit={handleSubmit}>
+
+      <div>
         <input
-          type="text"
           placeholder="Patient Name"
           value={patientName}
           onChange={(e) => setPatientName(e.target.value)}
         />
         <input
-          type="text"
           placeholder="Phone Number"
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
         />
         <select
+          value={selectedSpecialty}
+          onChange={(e) => setSelectedSpecialty(e.target.value)}
+        >
+          <option value="">Select Specialty</option>
+          {specialties.map((sp) => (
+            <option key={sp} value={sp}>
+              {sp}
+            </option>
+          ))}
+        </select>
+        <select
           value={selectedDoctor}
           onChange={(e) => setSelectedDoctor(e.target.value)}
         >
           <option value="">Select Doctor</option>
-          {doctors.map((doc) => (
+          {filteredDoctors.map((doc) => (
             <option key={doc.id} value={doc.name}>
               {doc.name}
             </option>
@@ -159,60 +198,54 @@ export default function CallCenterDashboard() {
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
         />
-        <div>
-          <label>Time: </label>
-          <select
-            value={selectedHour}
-            onChange={(e) => setSelectedHour(e.target.value)}
-          >
-            <option value="">Hour</option>
-            {[...Array(24).keys()].map((h) => (
-              <option key={h} value={String(h).padStart(2, "0")}>
-                {String(h).padStart(2, "0")}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedMinute}
-            onChange={(e) => setSelectedMinute(e.target.value)}
-          >
-            <option value="">Minute</option>
-            {["00", "15", "30", "45"].map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button type="submit">{editId ? "Update" : "Book"}</button>
-        {editId && (
-          <button type="button" onClick={resetForm}>
-            Cancel Edit
-          </button>
-        )}
-      </form>
+        <select
+          value={selectedHour}
+          onChange={(e) => setSelectedHour(e.target.value)}
+        >
+          <option value="">Hour</option>
+          {[...Array(24)].map((_, i) => (
+            <option key={i} value={String(i).padStart(2, "0")}>
+              {String(i).padStart(2, "0")}
+            </option>
+          ))}
+        </select>
+        <select
+          value={selectedMinute}
+          onChange={(e) => setSelectedMinute(e.target.value)}
+        >
+          <option value="">Minute</option>
+          {[...Array(60)].map((_, i) => (
+            <option key={i} value={String(i).padStart(2, "0")}>
+              {String(i).padStart(2, "0")}
+            </option>
+          ))}
+        </select>
+        <button onClick={handleBook}>Book</button>
+      </div>
 
-      <p>{status}</p>
+      {/* Search Filters */}
+      <h4>🔎 Filter Appointments</h4>
+      <div>
+        <input
+          type="date"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+        />
+        <select
+          value={filterDoctor}
+          onChange={(e) => setFilterDoctor(e.target.value)}
+        >
+          <option value="">All Doctors</option>
+          {[...new Set(appointments.map((a) => a.doctor))].map((doc) => (
+            <option key={doc} value={doc}>
+              {doc}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <h3>🔍 Filter Appointments</h3>
-      <input
-        type="date"
-        value={searchDate}
-        onChange={(e) => setSearchDate(e.target.value)}
-      />
-      <select
-        value={searchDoctor}
-        onChange={(e) => setSearchDoctor(e.target.value)}
-      >
-        <option value="">All Doctors</option>
-        {doctors.map((doc) => (
-          <option key={doc.id} value={doc.name}>
-            {doc.name}
-          </option>
-        ))}
-      </select>
-
-      <h3>📋 Appointments</h3>
+      {/* Appointment List */}
+      <h4>📋 Appointments</h4>
       <table border="1" cellPadding="5">
         <thead>
           <tr>
@@ -226,19 +259,14 @@ export default function CallCenterDashboard() {
         </thead>
         <tbody>
           {filteredAppointments.map((appt) => (
-            <tr
-              key={appt.id}
-              style={{
-                backgroundColor: appt.date === today ? "#e6f7ff" : "white",
-              }}
-            >
+            <tr key={appt.id}>
               <td>{appt.patientName}</td>
               <td>{appt.phoneNumber}</td>
               <td>{appt.doctor}</td>
               <td>{appt.date}</td>
               <td>{appt.time}</td>
               <td>
-                <button onClick={() => handleEdit(appt)}>Edit</button>{" "}
+                <button onClick={() => handleEdit(appt)}>Edit</button>
                 <button onClick={() => handleDelete(appt.id)}>Delete</button>
               </td>
             </tr>
