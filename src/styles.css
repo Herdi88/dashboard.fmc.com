@@ -54,3 +54,129 @@
   border-radius: 8px;
   box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
 }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  font-size: 14px;
+}
+
+table th,
+table td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+table tr:hover {
+  background-color: #f1f1f1;
+}
+
+button {
+  margin: 0 2px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.status-found {
+  color: green;
+  font-weight: bold;
+}
+
+.status-not-found {
+  color: red;
+  font-weight: bold;
+}
+
+.excel-section {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin: 20px 0;
+  background-color: #fcfcfc;
+  border-radius: 4px;
+}
+
+.excel-section h4 {
+  margin-top: 0;
+  color: #444;
+}
+.appointment-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 15px;
+}
+
+.appointment-table th,
+.appointment-table td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.appointment-table th {
+  background-color: #f8f8f8;
+  font-weight: bold;
+}
+
+.appointment-table .excel-row {
+  background-color: #fffdf5;
+}
+
+.appointment-table .found {
+  color: green;
+  font-weight: bold;
+}
+
+.appointment-table .not-found {
+  color: red;
+  font-weight: bold;
+}
+.appointment-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 15px;
+}
+
+.appointment-table th,
+.appointment-table td {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.appointment-table th {
+  background-color: #f8f8f8;
+  font-weight: bold;
+}
+
+.appointment-table .excel-row {
+  background-color: #fffdf5;
+}
+
+.appointment-table .found {
+  color: green;
+  font-weight: bold;
+}
+
+.appointment-table .not-found {
+  color: red;
+  font-weight: bold;
+}
+
+.form-section input,
+.form-section select {
+  margin: 5px;
+  padding: 5px;
+}

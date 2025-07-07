@@ -11,28 +11,23 @@ import {
 } from "firebase/firestore";
 
 export default function CallCenterDashboard() {
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
 
   const [resources, setResources] = useState([]);
-  const [specialties, setSpecialties] = useState([]);
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
   const [filteredDoctors, setFilteredDoctors] = useState([]);
+  const [specialties, setSpecialties] = useState([]);
+
   const [selectedDoctor, setSelectedDoctor] = useState("");
-
-  const [appointments, setAppointments] = useState([]);
-  const [filteredAppointments, setFilteredAppointments] = useState([]);
-
-  const [patientName, setPatientName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedHour, setSelectedHour] = useState("");
   const [selectedMinute, setSelectedMinute] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [appointments, setAppointments] = useState([]);
   const [editId, setEditId] = useState(null);
 
-  const [filterDate, setFilterDate] = useState("");
-  const [filterDoctor, setFilterDoctor] = useState("");
-
-  // Load doctors and specialties
+  // Fetch doctor list
   useEffect(() => {
     const fetchDoctors = async () => {
       const snapshot = await getDocs(collection(db, "resources"));
@@ -50,7 +45,7 @@ export default function CallCenterDashboard() {
     fetchDoctors();
   }, []);
 
-  // Filter doctor list when specialty is selected
+  // Filter doctors by specialty
   useEffect(() => {
     if (selectedSpecialty) {
       const filtered = resources.filter(
@@ -62,34 +57,15 @@ export default function CallCenterDashboard() {
     }
   }, [selectedSpecialty, resources]);
 
-  // Load all appointments
+  // Fetch appointments
   useEffect(() => {
     const fetchAppointments = async () => {
       const snapshot = await getDocs(collection(db, "appointments"));
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setAppointments(data);
-      setFilteredAppointments(data);
     };
     fetchAppointments();
   }, []);
-
-  // Filter appointments
-  useEffect(() => {
-    let filtered = [...appointments];
-
-    if (filterDate) {
-      filtered = filtered.filter((appt) => appt.date === filterDate);
-    }
-
-    if (filterDoctor) {
-      filtered = filtered.filter((appt) => appt.doctor === filterDoctor);
-    }
-
-    setFilteredAppointments(filtered);
-  }, [filterDate, filterDoctor, appointments]);
 
   const handleBook = async () => {
     if (
@@ -105,12 +81,14 @@ export default function CallCenterDashboard() {
     }
 
     const time = `${selectedHour}:${selectedMinute}`;
+
     const data = {
       patientName,
       phoneNumber,
       doctor: selectedDoctor,
       date: selectedDate,
       time,
+      bookedBy: currentUser?.displayName || currentUser?.email || "Unknown",
     };
 
     if (editId) {
@@ -120,7 +98,6 @@ export default function CallCenterDashboard() {
       await addDoc(collection(db, "appointments"), data);
     }
 
-    // Clear form
     setPatientName("");
     setPhoneNumber("");
     setSelectedDoctor("");
@@ -128,7 +105,6 @@ export default function CallCenterDashboard() {
     setSelectedHour("");
     setSelectedMinute("");
 
-    // Refresh appointments
     const snapshot = await getDocs(collection(db, "appointments"));
     const dataList = snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -198,53 +174,36 @@ export default function CallCenterDashboard() {
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
         />
+        {/* Hour Dropdown: 08 to 19 */}
         <select
           value={selectedHour}
           onChange={(e) => setSelectedHour(e.target.value)}
         >
           <option value="">Hour</option>
-          {[...Array(24)].map((_, i) => (
-            <option key={i} value={String(i).padStart(2, "0")}>
-              {String(i).padStart(2, "0")}
-            </option>
-          ))}
+          {[...Array(12)].map((_, i) => {
+            const hour = (i + 8).toString().padStart(2, "0");
+            return (
+              <option key={hour} value={hour}>
+                {hour}
+              </option>
+            );
+          })}
         </select>
+        {/* Minute Dropdown: 00, 15, 30, 45 */}
         <select
           value={selectedMinute}
           onChange={(e) => setSelectedMinute(e.target.value)}
         >
           <option value="">Minute</option>
-          {[...Array(60)].map((_, i) => (
-            <option key={i} value={String(i).padStart(2, "0")}>
-              {String(i).padStart(2, "0")}
+          {["00", "15", "30", "45"].map((min) => (
+            <option key={min} value={min}>
+              {min}
             </option>
           ))}
         </select>
         <button onClick={handleBook}>Book</button>
       </div>
 
-      {/* Search Filters */}
-      <h4>🔎 Filter Appointments</h4>
-      <div>
-        <input
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-        />
-        <select
-          value={filterDoctor}
-          onChange={(e) => setFilterDoctor(e.target.value)}
-        >
-          <option value="">All Doctors</option>
-          {[...new Set(appointments.map((a) => a.doctor))].map((doc) => (
-            <option key={doc} value={doc}>
-              {doc}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Appointment List */}
       <h4>📋 Appointments</h4>
       <table border="1" cellPadding="5">
         <thead>
@@ -254,17 +213,19 @@ export default function CallCenterDashboard() {
             <th>Doctor</th>
             <th>Date</th>
             <th>Time</th>
+            <th>Booked By</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filteredAppointments.map((appt) => (
+          {appointments.map((appt) => (
             <tr key={appt.id}>
               <td>{appt.patientName}</td>
               <td>{appt.phoneNumber}</td>
               <td>{appt.doctor}</td>
               <td>{appt.date}</td>
               <td>{appt.time}</td>
+              <td>{appt.bookedBy}</td>
               <td>
                 <button onClick={() => handleEdit(appt)}>Edit</button>
                 <button onClick={() => handleDelete(appt.id)}>Delete</button>

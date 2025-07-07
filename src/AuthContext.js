@@ -1,39 +1,46 @@
-// src/AuthContext.js
-import React, { useState, useEffect, createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
-  getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { app } from "./firebase"; // your initialized Firebase app
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "./firebase"; // ✅ FIXED path
 
-const auth = getAuth(app);
 const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          setUserData({ uid: user.uid, ...userDoc.data() });
+        }
+      } else {
+        setUserData(null);
+      }
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
   const login = (email, password) =>
     signInWithEmailAndPassword(auth, email, password);
+
   const logout = () => signOut(auth);
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout }}>
+    <AuthContext.Provider value={{ currentUser, userData, login, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);

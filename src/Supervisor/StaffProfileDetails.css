@@ -1,0 +1,115 @@
+.staff-profile-details {
+  padding: 20px;
+  max-width: 700px;
+  margin: auto;
+}
+
+.upload-box,
+.notes-box {
+  margin: 20px 0;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.score-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.score-item input {
+  padding: 6px;
+}
+
+textarea {
+  width: 100%;
+  padding: 8px;
+}
+
+button {
+  padding: 10px 16px;
+  background: #007bff;
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.success {
+  margin-top: 15px;
+  color: green;
+  font-weight: bold;
+}
+.staff-profile-page {
+  padding: 20px;
+}
+
+.staff-header {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.staff-header img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.performance-section {
+  background: #f6f6f6;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+}
+
+.performance-section ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.history-section table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.history-section th,
+.history-section td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.notes-box,
+.upload-box {
+  margin-top: 20px;
+}
+
+textarea {
+  width: 100%;
+  padding: 8px;
+}
+
+button {
+  margin-top: 15px;
+  padding: 10px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
